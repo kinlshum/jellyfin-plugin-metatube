@@ -85,7 +85,14 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
 
         // Distinct and clean blank list
         m.Genres = m.Genres?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray() ?? Array.Empty<string>();
-        m.Actors = m.Actors?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray() ?? Array.Empty<string>();
+        m.Actors = m.Actors?.Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(NormalizePersonName)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray() ?? Array.Empty<string>();
+
+#if __EMBY__
+        await using var actorCreationLock = await ActorCreationLock.AcquireAsync(m.Actors, cancellationToken)
+            .ConfigureAwait(false);
+#endif
         m.PreviewImages = m.PreviewImages?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray() ??
                           Array.Empty<string>();
 
@@ -289,6 +296,12 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
         {
             Logger.Error("Get actor image error: {0} ({1})", actor.Name, e.Message);
         }
+    }
+
+    private static string NormalizePersonName(string name)
+    {
+        return string.Join(' ', name.Normalize().Split((char[])null,
+            StringSplitOptions.RemoveEmptyEntries));
     }
 
     private async Task ConvertToRealActorNames(MovieSearchResult m, CancellationToken cancellationToken)
