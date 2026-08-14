@@ -36,7 +36,7 @@ public class PluginConfiguration : BasePluginConfiguration
 #if __EMBY__
     [DisplayName("Enable auto update")]
     [Description("Automatically update the plugin through scheduled tasks.")]
-    public bool EnableAutoUpdate { get; set; } = true;
+    public bool EnableAutoUpdate { get; set; } = false;
 #endif
 
 #if __EMBY__
