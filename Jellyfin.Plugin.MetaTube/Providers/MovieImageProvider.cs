@@ -83,7 +83,7 @@ public class MovieImageProvider : BaseProvider, IRemoteImageProvider, IHasOrder
         }
 
 #if __EMBY__
-        if (Configuration.SaveAllBackdropsLocally && libraryOptions.SaveLocalMetadata)
+        if (libraryOptions.SaveLocalMetadata)
             await SaveAllBackdropsLocally(item, m, cancellationToken).ConfigureAwait(false);
 #endif
 
