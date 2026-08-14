@@ -13,6 +13,15 @@ public class ProviderId
     public static ProviderId Parse(string rawPid)
     {
         var values = rawPid?.Split(':');
+        if (values?.Length > 2 && ToDouble(values[2]) is null && ToBool(values[2]) is null)
+        {
+            return new ProviderId
+            {
+                Provider = values[0],
+                Id = Uri.UnescapeDataString(string.Join(':', values.Skip(1)))
+            };
+        }
+
         return new ProviderId
         {
             Provider = values?.Length > 0 ? values[0] : string.Empty,
