@@ -97,6 +97,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public int DefaultImageQuality { get; set; } = 90;
 
 #if __EMBY__
+    [DisplayName("Save all backdrops beside media")]
+    [Description("Download every movie backdrop as fanart.jpg, fanart1.jpg, fanart2.jpg, and so on.")]
+#endif
+    public bool SaveAllBackdropsLocally { get; set; } = true;
+
+#if __EMBY__
     [DisplayName("Enable movie provider filter")]
     [Description("Filter and reorder search results from movie providers.")]
 #endif

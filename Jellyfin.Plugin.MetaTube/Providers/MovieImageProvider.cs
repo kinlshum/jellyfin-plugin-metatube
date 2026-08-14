@@ -82,8 +82,62 @@ public class MovieImageProvider : BaseProvider, IRemoteImageProvider, IHasOrder
             });
         }
 
+#if __EMBY__
+        if (Configuration.SaveAllBackdropsLocally && libraryOptions.SaveLocalMetadata)
+            await SaveAllBackdropsLocally(item, m, cancellationToken).ConfigureAwait(false);
+#endif
+
         return images;
     }
+
+#if __EMBY__
+    private async Task SaveAllBackdropsLocally(BaseItem item, Metadata.MovieInfo movie,
+        CancellationToken cancellationToken)
+    {
+        var mediaDirectory = Path.GetDirectoryName(item.Path);
+        if (string.IsNullOrWhiteSpace(mediaDirectory) || !Directory.Exists(mediaDirectory))
+            return;
+
+        var urls = new List<string>
+        {
+            ApiClient.GetBackdropImageApiUrl(movie.Provider, movie.Id)
+        };
+        urls.AddRange((movie.PreviewImages ?? Array.Empty<string>())
+            .Select(url => ApiClient.GetBackdropImageApiUrl(movie.Provider, movie.Id, url)));
+
+        try
+        {
+            for (var index = 0; index < urls.Count; index++)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var fileName = index == 0 ? "fanart.jpg" : $"fanart{index}.jpg";
+                var destination = Path.Combine(mediaDirectory, fileName);
+                var temporary = destination + ".metatube.tmp";
+                var response = await ApiClient.GetImageResponse(urls[index], cancellationToken).ConfigureAwait(false);
+                await using (response.Content.ConfigureAwait(false))
+                await using (var output = new FileStream(temporary, FileMode.Create, FileAccess.Write, FileShare.None,
+                                 81920, true))
+                    await response.Content.CopyToAsync(output, cancellationToken).ConfigureAwait(false);
+                File.Move(temporary, destination, true);
+            }
+
+            foreach (var path in Directory.EnumerateFiles(mediaDirectory, "fanart*.jpg"))
+            {
+                var stem = Path.GetFileNameWithoutExtension(path);
+                if (stem == "fanart")
+                    continue;
+                if (int.TryParse(stem["fanart".Length..], out var index) && index >= urls.Count)
+                    File.Delete(path);
+            }
+
+            Logger.Info("Saved {0} backdrops beside {1}", urls.Count, item.Path);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            Logger.ErrorException("Failed to save all backdrops beside " + item.Path, exception);
+        }
+    }
+#endif
 
     public bool Supports(BaseItem item)
     {
