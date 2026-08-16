@@ -79,12 +79,8 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
         if (Configuration.TranslationMode != TranslationMode.Disabled)
             await TranslateMovieInfo(m, info.MetadataLanguage, cancellationToken);
 
-        if (string.Equals(m.Provider, "JavLibrary", StringComparison.OrdinalIgnoreCase) &&
-            Configuration.TranslationMode != TranslationMode.Disabled)
-            await TranslateJavLibraryActors(m, info.MetadataLanguage, cancellationToken);
-
-        // Substitute actors from every provider. For JavLibrary this also lets
-        // translated aliases match entries in the custom substitution table.
+        // Preserve provider actor names unless an exact custom substitution exists.
+        // In particular, Japanese JavLibrary names must not be machine translated.
         if (Configuration.EnableActorSubstitution)
             m.Actors = Configuration.GetActorSubstitutionTable().Substitute(m.Actors).ToArray();
 
@@ -381,37 +377,6 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
         {
             Logger.Error("Translate error: {0}", e.Message);
         }
-    }
-
-    private async Task TranslateJavLibraryActors(Metadata.MovieInfo m, string language,
-        CancellationToken cancellationToken)
-    {
-        var actors = new List<string>();
-        var substitutions = Configuration.EnableActorSubstitution
-            ? Configuration.GetActorSubstitutionTable()
-            : null;
-
-        foreach (var actor in m.Actors ?? Array.Empty<string>())
-        {
-            if (substitutions?.TryGetValue(actor, out var customName) == true)
-            {
-                if (!string.IsNullOrWhiteSpace(customName))
-                    actors.Add(customName);
-                continue;
-            }
-
-            try
-            {
-                actors.Add(await TranslationHelper.TranslateActorAsync(actor, language, cancellationToken));
-            }
-            catch (Exception e)
-            {
-                Logger.Error("Translate actor error: {0} ({1})", actor, e.Message);
-                actors.Add(actor);
-            }
-        }
-
-        m.Actors = actors.ToArray();
     }
 
     private static string RenderTemplate(string template, Dictionary<string, string> parameters)

@@ -93,16 +93,6 @@ public static class TranslationHelper
             m.Summary = await TranslateAsync(m.Summary, AutoLanguageCode, to, cancellationToken);
     }
 
-    public static async Task<string> TranslateActorAsync(string actor, string to,
-        CancellationToken cancellationToken)
-    {
-        if (string.IsNullOrWhiteSpace(actor) ||
-            string.Equals(to, JapaneseLanguageCode, StringComparison.OrdinalIgnoreCase))
-            return actor;
-
-        return await TranslateAsync(actor, JapaneseLanguageCode, to, cancellationToken);
-    }
-
     private static async Task<T> RetryAsync<T>(Func<Task<T>> func, int retryCount)
     {
         while (true)
