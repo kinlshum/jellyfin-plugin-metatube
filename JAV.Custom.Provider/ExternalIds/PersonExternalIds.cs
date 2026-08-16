@@ -35,7 +35,7 @@ public sealed class SexctId() : PersonExternalId("Sexct", "SexctActor");
 public sealed class XId() : PersonExternalId("X", "XActor", "https://x.com/{0}");
 public sealed class OfficialWebsiteId() : PersonExternalId("Official website", "OfficialWebsite");
 public sealed class InstagramId() : PersonExternalId("Instagram", "InstagramActor", "https://instagram.com/{0}/");
-public sealed class TwitterId() : PersonExternalId("Twitter", "TwitterActor", "https://twitter.com/{0}/");
+public sealed class TwitterId() : PersonExternalId("X (Twitter)", "TwitterActor", "https://twitter.com/{0}/");
 public sealed class MovieBotId() : PersonExternalId("MovieBot Person", "MovieBotPerson");
 public sealed class Data18Id() : PersonExternalId("Data 18 Person", "Data18Person");
 public sealed class ThePornMapId() : PersonExternalId("ThePornMap Person", "ThePornMapPerson");

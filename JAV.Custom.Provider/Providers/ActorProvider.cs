@@ -258,7 +258,7 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             ["MetaTube"] = ("MetaTube", $"{Plugin.Instance.Configuration.MetaTubeServer.TrimEnd('/')}?redirect={{0}}"),
             ["SextbActress"] = ("Sextb", "https://sextb.net/actress/{0}"),
             ["StashActor"] = ("Stash", "http://localhost:9999/performers/{0}"),
-            ["TwitterActor"] = ("Twitter", "https://twitter.com/{0}/"),
+            ["TwitterActor"] = ("X (Twitter)", "https://twitter.com/{0}/"),
             ["PubjavActor"] = ("Pubjav", "https://pubjav.com/tag/{0}/")
         };
         foreach (var externalId in record.ExternalIds)
