@@ -70,6 +70,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool EnableRealActorNames { get; set; } = false;
 
 #if __EMBY__
+    [DisplayName("Expose MetaTube actor provider")]
+    [Description("Show individual MetaTube actor-source results in Emby. Disable when JAV_CUSTOM_PROVIDER performs merged actor lookup.")]
+#endif
+    public bool EnableActorProvider { get; set; } = false;
+
+#if __EMBY__
     [DisplayName("Enable badges")]
     [Description("Add Chinese subtitle badges to primary images.")]
 #endif

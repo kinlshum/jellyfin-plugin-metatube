@@ -25,6 +25,8 @@ public class ActorProvider : BaseProvider, IRemoteMetadataProvider<Person, Perso
     public async Task<MetadataResult<Person>> GetMetadata(PersonLookupInfo info,
         CancellationToken cancellationToken)
     {
+        if (!Configuration.EnableActorProvider) return new MetadataResult<Person>();
+
         var pid = info.GetPid(Plugin.ProviderId);
         if (string.IsNullOrWhiteSpace(pid.Id) || string.IsNullOrWhiteSpace(pid.Provider))
         {
@@ -61,6 +63,8 @@ public class ActorProvider : BaseProvider, IRemoteMetadataProvider<Person, Perso
     public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(
         PersonLookupInfo info, CancellationToken cancellationToken)
     {
+        if (!Configuration.EnableActorProvider) return Enumerable.Empty<RemoteSearchResult>();
+
         var pid = info.GetPid(Plugin.ProviderId);
 
         var searchResults = new List<ActorSearchResult>();

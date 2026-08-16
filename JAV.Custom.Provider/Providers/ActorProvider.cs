@@ -28,10 +28,13 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
         _logger.Info("JAV_CUSTOM_PROVIDER search: {0}; loaded records: {1}", info.Name, records.Count);
         info.ProviderIds.TryGetValue(Plugin.ProviderId, out var id);
         var record = RecordStore.FindById(records, id) ?? RecordStore.Search(records, info.Name).FirstOrDefault();
+        var transient = record is null;
+        record ??= CreateLookupRecord(info, id);
         if (record is null) return new MetadataResult<Person>();
 
         var merged = Clone(record);
-        var remoteActors = await OnlineActorLookup.Lookup(record.Aliases.FirstOrDefault() ?? record.Name, _logger, cancellationToken).ConfigureAwait(false);
+        var remoteActors = await OnlineActorLookup.Lookup(record, _logger, cancellationToken).ConfigureAwait(false);
+        if (transient && remoteActors.Count == 0) return new MetadataResult<Person>();
         MergeOnlineData(merged, remoteActors);
 
         var person = new Person
@@ -66,6 +69,17 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             ? RecordStore.Search(records, info.Name)
             : records.Where(record => string.Equals(record.Id, id, StringComparison.OrdinalIgnoreCase));
 
+        if (!matches.Any() && !string.IsNullOrWhiteSpace(info.Name))
+        {
+            var dynamicResult = new RemoteSearchResult
+            {
+                Name = $"[{Plugin.ProviderName}] {info.Name}",
+                SearchProviderName = Name
+            };
+            dynamicResult.SetProviderId(Plugin.ProviderId, "lookup:" + info.Name.Trim());
+            return Task.FromResult(new[] { dynamicResult }.AsEnumerable());
+        }
+
         var results = matches.Select(record =>
         {
             var result = new RemoteSearchResult
@@ -86,13 +100,31 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
     private static string[] BuildLocations(ActorRecord record) =>
         new[] { record.PlaceOfBirth, record.Nationality }.Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToArray();
 
+    private static ActorRecord? CreateLookupRecord(PersonLookupInfo info, string? id)
+    {
+        var name = !string.IsNullOrWhiteSpace(info.Name)
+            ? info.Name.Trim()
+            : id?.StartsWith("lookup:", StringComparison.OrdinalIgnoreCase) == true ? id[7..].Trim() : string.Empty;
+        if (name.Length == 0) return null;
+
+        var record = new ActorRecord
+        {
+            Id = !string.IsNullOrWhiteSpace(id) ? id : "lookup:" + name,
+            Name = name,
+            Aliases = new List<string> { name }
+        };
+        foreach (var providerId in info.ProviderIds.Where(pair => !string.IsNullOrWhiteSpace(pair.Value)))
+            record.ExternalIds[providerId.Key] = providerId.Value;
+        return record;
+    }
+
     private static string FormatOverview(ActorRecord record)
     {
         var parts = new List<string>();
         if (DateTime.TryParse(record.DebutDate, out var debutDate))
             parts.Add($"Debut: {debutDate:MMMM d, yyyy}{FormatAge(record.DebutAge)}");
         if (DateTime.TryParse(record.Birthday, out var birthday))
-            parts.Add($"Born: {birthday:MMMM d, yyyy} ({DateTime.Today.Year - birthday.Year} years old)");
+            parts.Add($"Born: {birthday:MMMM d, yyyy} ({AgeOn(birthday, DateTime.Today)} years old)");
         if (record.EmbyMovieCount.HasValue || record.JavDbMovieCount.HasValue)
             parts.Add($"{record.EmbyMovieCount?.ToString() ?? "?"} / {record.JavDbMovieCount?.ToString() ?? "?"} movie(s)");
         var lines = new List<string> { string.Join(" | ", parts) };
@@ -109,6 +141,8 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
         AddLine(lines, "Hobbies and special skills", record.Hobbies);
         AddLine(lines, "AV appearance period", record.AvAppearancePeriod);
         AddLine(lines, "Debut work", record.DebutTitle);
+        AddUrlLine(lines, "Blog", FindUrl(record, "Blog", "X"));
+        AddUrlLine(lines, "Official website", FindUrl(record, "Official website"));
         if (record.Tags.Count > 0) AddLine(lines, "Tags", string.Join(" ", record.Tags.Distinct(StringComparer.OrdinalIgnoreCase)));
 
         var links = BuildLinks(record).ToList();
@@ -117,6 +151,22 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
     }
 
     private static string FormatAge(int? age) => age.HasValue ? $" ({age.Value} years old)" : string.Empty;
+
+    private static int AgeOn(DateTime birthday, DateTime date)
+    {
+        var age = date.Year - birthday.Year;
+        if (birthday.Date > date.AddYears(-age).Date) age--;
+        return age;
+    }
+
+    private static string FindUrl(ActorRecord record, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (record.Urls.TryGetValue(name, out var url) && !string.IsNullOrWhiteSpace(url)) return url;
+        }
+        return string.Empty;
+    }
 
     private static void SetCustomFields(Person person, ActorRecord record)
     {
@@ -179,6 +229,13 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
     private static void AddLine(ICollection<string> lines, string label, string value)
     {
         if (!string.IsNullOrWhiteSpace(value)) lines.Add($"{WebUtility.HtmlEncode(label)}: {WebUtility.HtmlEncode(value)}");
+    }
+
+    private static void AddUrlLine(ICollection<string> lines, string label, string value)
+    {
+        if (Uri.TryCreate(value, UriKind.Absolute, out var uri)
+            && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+            lines.Add($"{WebUtility.HtmlEncode(label)}: <a href=\"{WebUtility.HtmlEncode(value)}\">{WebUtility.HtmlEncode(value)}</a>");
     }
 
     private static IEnumerable<string> BuildLinks(ActorRecord record)
