@@ -65,7 +65,7 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
         return new MetadataResult<Person> { Item = person, HasMetadata = true };
     }
 
-    public Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonLookupInfo info, CancellationToken cancellationToken)
+    public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(PersonLookupInfo info, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
         var records = RecordStore.Load(_logger);
@@ -76,13 +76,20 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
 
         if (!matches.Any() && !string.IsNullOrWhiteSpace(info.Name))
         {
+            var lookupId = "lookup:" + info.Name.Trim();
+            var lookupRecord = CreateLookupRecord(info, lookupId)!;
+            var online = await OnlineActorLookup.Lookup(lookupRecord, _logger, cancellationToken).ConfigureAwait(false);
+            var resolved = online.FirstOrDefault();
             var dynamicResult = new RemoteSearchResult
             {
-                Name = $"[{Plugin.ProviderName}] {info.Name}",
-                SearchProviderName = Name
+                Name = resolved?.Name ?? info.Name.Trim(),
+                SearchProviderName = Name,
+                ImageUrl = resolved?.Images.FirstOrDefault() ?? string.Empty,
+                PremiereDate = resolved is not null && resolved.Birthday.Year > 1 ? resolved.Birthday : null,
+                ProductionYear = resolved is not null && resolved.Birthday.Year > 1 ? resolved.Birthday.Year : null
             };
-            dynamicResult.SetProviderId(Plugin.ProviderId, "lookup:" + info.Name.Trim());
-            return Task.FromResult(new[] { dynamicResult }.AsEnumerable());
+            dynamicResult.SetProviderId(Plugin.ProviderId, lookupId);
+            return new[] { dynamicResult };
         }
 
         var results = matches.Select(record =>
@@ -99,7 +106,7 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             return result;
         }).ToList();
         _logger.Info("JAV_CUSTOM_PROVIDER search results: {0}", results.Count);
-        return Task.FromResult(results.AsEnumerable());
+        return results;
     }
 
     private static string[] BuildLocations(ActorRecord record) =>
