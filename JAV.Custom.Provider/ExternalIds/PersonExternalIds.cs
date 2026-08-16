@@ -46,6 +46,16 @@ public sealed class OfficialWebsiteId() : PersonExternalId("Official website", "
 public sealed class InstagramId() : PersonExternalId("Instagram", "InstagramActor", "https://instagram.com/{0}/");
 public sealed class TwitterId() : PersonExternalId("Twitter", "TwitterActor", "https://twitter.com/{0}/");
 public sealed class StashId() : PersonExternalId("Stash", "StashActor", "http://localhost:9999/performers/{0}");
+
+// Preserve Provider Ids Extender keys already stored in the Emby database.
+public sealed class LegacySupjavId() : PersonExternalId("Superjav", "superjav", "https://supjav.com/category/cast/{0}");
+public sealed class LegacyJavDbId() : PersonExternalId("Javdb", "javdb", "https://javdb.com/actors/{0}.html");
+public sealed class LegacyInstagramId() : PersonExternalId("Instagram", "i.", "https://instagram.com/{0}");
+public sealed class LegacyTwitterId() : PersonExternalId("Twitter", "t.", "https://twitter.com/{0}");
+public sealed class LegacyJavLibraryIdolId() : PersonExternalId("JavLibrary Idol", "jli.", "https://www.javlibrary.com/en/vl_star.php?s={0}");
+public sealed class LegacySextbId() : PersonExternalId("Sextb JAV Actress ID", "stb.", "https://sextb.net/actress/{0}");
+public sealed class LegacyXsListId() : PersonExternalId("XsList", "xslist1", "https://xslist.org/en/model/{0}.html");
+public sealed class LegacyStashId() : PersonExternalId("Stash", "stash", "http://localhost:9999/performers/{0}");
 public sealed class AdultDvdEmpireId() : PersonExternalId("AdultDVDEmpire Person", "AdultDVDEmpirePerson");
 public sealed class MovieBotId() : PersonExternalId("MovieBot Person", "MovieBotPerson");
 public sealed class Data18Id() : PersonExternalId("Data 18 Person", "Data18Person");
