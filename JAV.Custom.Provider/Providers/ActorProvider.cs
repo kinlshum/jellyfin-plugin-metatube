@@ -213,8 +213,8 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
     {
         foreach (var actor in actors)
         {
-            if (string.Equals(actor.Provider, "JAVActorResolver", StringComparison.OrdinalIgnoreCase)
-                && !string.IsNullOrWhiteSpace(actor.Name))
+            var mergedResolver = string.Equals(actor.Provider, "JAVActorResolver", StringComparison.OrdinalIgnoreCase);
+            if (mergedResolver && !string.IsNullOrWhiteSpace(actor.Name))
                 record.Name = actor.Name;
             record.Aliases = record.Aliases.Concat(actor.Aliases).Append(actor.Name).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             record.ImageUrls = record.ImageUrls.Concat(actor.Images).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToList();
@@ -227,13 +227,15 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             record.PlaceOfBirth = First(record.PlaceOfBirth, actor.PlaceOfBirth);
             record.Height = First(record.Height, actor.Height > 0 ? $"{actor.Height}cm" : string.Empty);
             record.Hobbies = First(record.Hobbies, string.Join(", ", new[] { actor.Hobby, actor.Skill }.Where(value => !string.IsNullOrWhiteSpace(value))));
-            if (!string.IsNullOrWhiteSpace(actor.Homepage)) record.Urls.TryAdd(actor.Provider, actor.Homepage);
-            record.ExternalIds.TryAdd(actor.Provider, actor.Id);
+            if (!mergedResolver && !string.IsNullOrWhiteSpace(actor.Homepage))
+                record.Urls.TryAdd(actor.Provider, actor.Homepage);
+            if (!mergedResolver) record.ExternalIds.TryAdd(actor.Provider, actor.Id);
             foreach (var externalId in actor.ExternalIds.Where(pair => !string.IsNullOrWhiteSpace(pair.Value)))
                 record.ExternalIds.TryAdd(externalId.Key, externalId.Value);
             foreach (var url in actor.Urls.Where(pair => !string.IsNullOrWhiteSpace(pair.Value)))
                 record.Urls.TryAdd(url.Key, url.Value);
-            if (!record.ExternalIds.ContainsKey("MetaTube")) record.ExternalIds["MetaTube"] = $"{actor.Provider}:{actor.Id}";
+            if (!record.ExternalIds.ContainsKey("MetaTube"))
+                record.ExternalIds["MetaTube"] = mergedResolver ? actor.Id : $"{actor.Provider}:{actor.Id}";
         }
     }
 
