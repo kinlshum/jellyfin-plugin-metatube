@@ -54,7 +54,12 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
 
         person.SetProviderId(Plugin.ProviderId, record.Id);
         foreach (var externalId in merged.ExternalIds.Where(pair => !string.IsNullOrWhiteSpace(pair.Value)))
-            person.SetProviderId(externalId.Key, externalId.Value);
+        {
+            var key = string.Equals(externalId.Key, "StashActor", StringComparison.OrdinalIgnoreCase)
+                ? "Stash"
+                : externalId.Key;
+            person.SetProviderId(key, externalId.Value);
+        }
         SetCustomFields(person, merged);
 
         return new MetadataResult<Person> { Item = person, HasMetadata = true };
