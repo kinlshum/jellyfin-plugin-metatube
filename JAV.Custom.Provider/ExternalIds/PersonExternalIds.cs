@@ -56,16 +56,13 @@ public sealed class LegacyJavLibraryIdolId() : PersonExternalId("JavLibrary Idol
 public sealed class LegacySextbId() : PersonExternalId("Sextb JAV Actress ID", "stb.", "https://sextb.net/actress/{0}");
 public sealed class LegacyXsListId() : PersonExternalId("XsList", "xslist1", "https://xslist.org/en/model/{0}.html");
 public sealed class LegacyStashId() : PersonExternalId("Stash", "stash", "http://localhost:9999/performers/{0}");
-public sealed class AdultDvdEmpireId() : PersonExternalId("AdultDVDEmpire Person", "AdultDVDEmpirePerson");
 public sealed class MovieBotId() : PersonExternalId("MovieBot Person", "MovieBotPerson");
 public sealed class Data18Id() : PersonExternalId("Data 18 Person", "Data18Person");
 public sealed class ThePornMapId() : PersonExternalId("ThePornMap Person", "ThePornMapPerson");
 public sealed class HotMoviesId() : PersonExternalId("Hot Movies Person", "HotMoviesPerson");
 public sealed class ClassicPornId() : PersonExternalId("The Classic Porn Person", "ClassicPornPerson");
 public sealed class XappieId() : PersonExternalId("Xappie Person", "XappiePerson");
-public sealed class AdultFilmCentralId() : PersonExternalId("AdultFilmCentral Person", "AdultFilmCentralPerson");
 public sealed class UralroverId() : PersonExternalId("Uralrover Person", "UralroverPerson");
-public sealed class AdultFilmDatabaseId() : PersonExternalId("AdultFilmDatabase Person", "AdultFilmDatabasePerson");
 public sealed class BluRayComId() : PersonExternalId("BluRayCom Person", "BluRayComPerson");
 public sealed class KinoriumId() : PersonExternalId("kinorium Person", "KinoriumPerson");
 public sealed class PoppornId() : PersonExternalId("Popporn Person", "PoppornPerson");
@@ -73,7 +70,6 @@ public sealed class IafdId() : PersonExternalId("IAFD Performer ID", "IAFDPerfor
 public sealed class PornMakiId() : PersonExternalId("Porn Maki Person ID", "PornMakiPerson");
 public sealed class MyPersonApiId() : PersonExternalId("MyPersonApi", "MyPersonApi");
 public sealed class MediaMetaAboutId() : PersonExternalId("Media and Meta About Page", "MediaMetaAbout");
-public sealed class AdmPersonId() : PersonExternalId("ADM Person", "ADMPerson");
 public sealed class AlsoKnownAsId() : PersonExternalId("Also known as", "JAVAlsoKnownAs");
 public sealed class DebutDateId() : PersonExternalId("Debut date", "JAVDebutDate");
 public sealed class DebutTitleId() : PersonExternalId("Debut title", "JAVDebutTitle");
