@@ -32,6 +32,20 @@ internal static class OnlineActorLookup
                         ?? string.Empty;
             if (query.Length == 0) return Array.Empty<RemoteActor>();
 
+            if (!string.IsNullOrWhiteSpace(configuration.ActorResolverUrl))
+            {
+                try
+                {
+                    var resolverUrl = $"{configuration.ActorResolverUrl.TrimEnd('/')}/resolve?name={Uri.EscapeDataString(query)}";
+                    var resolved = await Get<ApiEnvelope<RemoteActor>>(resolverUrl, string.Empty, cancellationToken).ConfigureAwait(false);
+                    if (resolved.Data is not null) return new[] { resolved.Data };
+                }
+                catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
+                {
+                    logger.ErrorException("Actor resolver failed; falling back to MetaTube sources for " + record.Name, exception);
+                }
+            }
+
             var searchUrl = $"{configuration.MetaTubeServer.TrimEnd('/')}/v1/actors/search?q={Uri.EscapeDataString(query)}&fallback=true";
             var search = await Get<ApiEnvelope<List<RemoteActorSearch>>>(searchUrl, configuration.MetaTubeToken, cancellationToken).ConfigureAwait(false);
             var matches = (search.Data ?? new List<RemoteActorSearch>())

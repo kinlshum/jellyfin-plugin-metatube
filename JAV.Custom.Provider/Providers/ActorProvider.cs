@@ -107,9 +107,9 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
 
     private static ActorRecord? CreateLookupRecord(PersonLookupInfo info, string? id)
     {
-        var name = !string.IsNullOrWhiteSpace(info.Name)
-            ? info.Name.Trim()
-            : id?.StartsWith("lookup:", StringComparison.OrdinalIgnoreCase) == true ? id[7..].Trim() : string.Empty;
+        var name = id?.StartsWith("lookup:", StringComparison.OrdinalIgnoreCase) == true
+            ? id[7..].Trim()
+            : !string.IsNullOrWhiteSpace(info.Name) ? info.Name.Trim() : string.Empty;
         if (name.Length == 0) return null;
 
         var record = new ActorRecord
@@ -213,6 +213,9 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
     {
         foreach (var actor in actors)
         {
+            if (string.Equals(actor.Provider, "JAVActorResolver", StringComparison.OrdinalIgnoreCase)
+                && !string.IsNullOrWhiteSpace(actor.Name))
+                record.Name = actor.Name;
             record.Aliases = record.Aliases.Concat(actor.Aliases).Append(actor.Name).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             record.ImageUrls = record.ImageUrls.Concat(actor.Images).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToList();
             if (string.IsNullOrWhiteSpace(record.Birthday) && actor.Birthday.Year > 1) record.Birthday = actor.Birthday.ToString("yyyy-MM-dd");
@@ -221,10 +224,15 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             record.CupSize = First(record.CupSize, actor.CupSize);
             record.Measurements = First(record.Measurements, actor.Measurements);
             record.Nationality = First(record.Nationality, actor.Nationality);
+            record.PlaceOfBirth = First(record.PlaceOfBirth, actor.PlaceOfBirth);
             record.Height = First(record.Height, actor.Height > 0 ? $"{actor.Height}cm" : string.Empty);
             record.Hobbies = First(record.Hobbies, string.Join(", ", new[] { actor.Hobby, actor.Skill }.Where(value => !string.IsNullOrWhiteSpace(value))));
             if (!string.IsNullOrWhiteSpace(actor.Homepage)) record.Urls.TryAdd(actor.Provider, actor.Homepage);
             record.ExternalIds.TryAdd(actor.Provider, actor.Id);
+            foreach (var externalId in actor.ExternalIds.Where(pair => !string.IsNullOrWhiteSpace(pair.Value)))
+                record.ExternalIds.TryAdd(externalId.Key, externalId.Value);
+            foreach (var url in actor.Urls.Where(pair => !string.IsNullOrWhiteSpace(pair.Value)))
+                record.Urls.TryAdd(url.Key, url.Value);
             if (!record.ExternalIds.ContainsKey("MetaTube")) record.ExternalIds["MetaTube"] = $"{actor.Provider}:{actor.Id}";
         }
     }

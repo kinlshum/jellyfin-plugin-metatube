@@ -24,6 +24,10 @@ public sealed class RemoteActor : RemoteActorSearch
     [JsonPropertyName("hobby")] public string Hobby { get; set; } = string.Empty;
     [JsonPropertyName("skill")] public string Skill { get; set; } = string.Empty;
     [JsonPropertyName("summary")] public string Summary { get; set; } = string.Empty;
+    [JsonPropertyName("place_of_birth")] public string PlaceOfBirth { get; set; } = string.Empty;
+    [JsonPropertyName("original_name")] public string OriginalName { get; set; } = string.Empty;
+    [JsonPropertyName("external_ids")] public Dictionary<string, string> ExternalIds { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+    [JsonPropertyName("urls")] public Dictionary<string, string> Urls { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }
 
 public sealed class ApiEnvelope<T>

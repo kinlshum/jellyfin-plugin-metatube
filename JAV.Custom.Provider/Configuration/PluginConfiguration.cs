@@ -23,6 +23,10 @@ public sealed class PluginConfiguration : EditableOptionsBase
     [DisplayName("MetaTube token")]
     public string MetaTubeToken { get; set; } = string.Empty;
 
+    [DisplayName("Actor resolver")]
+    [Description("Standalone service that merges actor sources and returns a canonical identity.")]
+    public string ActorResolverUrl { get; set; } = "http://192.168.10.170:9211";
+
     [DisplayName("Actor source order")]
     [Description("Only exact-name results from these providers are merged, in this order.")]
     public string ActorSourceOrder { get; set; } = "AV-LEAGUE,XsList,Minnano-AV,Gfriends";
