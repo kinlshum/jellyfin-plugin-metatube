@@ -76,6 +76,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public bool EnableActorProvider { get; set; } = false;
 
 #if __EMBY__
+    [DisplayName("Actor resolver URL")]
+    [Description("Resolve movie cast aliases to canonical actor names during title lookup.")]
+#endif
+    public string ActorResolverUrl { get; set; } = "http://192.168.10.170:9211";
+
+#if __EMBY__
     [DisplayName("Enable badges")]
     [Description("Add Chinese subtitle badges to primary images.")]
 #endif

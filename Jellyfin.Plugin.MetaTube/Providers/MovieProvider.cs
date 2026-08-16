@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Jellyfin.Plugin.MetaTube.Configuration;
 using Jellyfin.Plugin.MetaTube.Extensions;
@@ -33,6 +34,7 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
     private const string Rating = "JP-18+";
 
     private static readonly string[] AvBaseSupportedProviderNames = { "DUGA", "FANZA", "Getchu", "MGS" };
+    private static readonly HttpClient ActorResolverClient = new() { Timeout = TimeSpan.FromSeconds(30) };
 
 #if __EMBY__
     public MetadataFeatures[] Features => new[]
@@ -83,6 +85,8 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
         // In particular, Japanese JavLibrary names must not be machine translated.
         if (Configuration.EnableActorSubstitution)
             m.Actors = Configuration.GetActorSubstitutionTable().Substitute(m.Actors).ToArray();
+
+        m.Actors = await ResolveCanonicalActorNames(m.Actors, cancellationToken).ConfigureAwait(false);
 
         // Distinct and clean blank list
         m.Genres = m.Genres?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray() ?? Array.Empty<string>();
@@ -203,6 +207,35 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
         }
 
         return result;
+    }
+
+    private async Task<string[]> ResolveCanonicalActorNames(IEnumerable<string> actors,
+        CancellationToken cancellationToken)
+    {
+        var names = actors?.Where(name => !string.IsNullOrWhiteSpace(name)).ToArray() ?? Array.Empty<string>();
+        if (names.Length == 0 || string.IsNullOrWhiteSpace(Configuration.ActorResolverUrl)) return names;
+
+        var resolved = new List<string>(names.Length);
+        foreach (var name in names)
+        {
+            try
+            {
+                var url = $"{Configuration.ActorResolverUrl.TrimEnd('/')}/resolve?name={Uri.EscapeDataString(name)}";
+                await using var stream = await ActorResolverClient.GetStreamAsync(url, cancellationToken).ConfigureAwait(false);
+                using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+                var canonical = document.RootElement.GetProperty("data").GetProperty("name").GetString();
+                resolved.Add(string.IsNullOrWhiteSpace(canonical) ? name : canonical);
+            }
+            catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException
+                                              or JsonException or KeyNotFoundException)
+            {
+                Logger.Warn("Actor resolver failed for {0}: {1}", name, exception.Message);
+                resolved.Add(name);
+            }
+        }
+
+        return resolved.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(MovieInfo info,
