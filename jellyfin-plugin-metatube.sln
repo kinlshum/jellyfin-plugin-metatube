@@ -2,6 +2,8 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Jellyfin.Plugin.MetaTube", "Jellyfin.Plugin.MetaTube\Jellyfin.Plugin.MetaTube.csproj", "{DD1CDA77-5286-454A-BDCD-866FBE15E740}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JAV.Custom.Provider", "JAV.Custom.Provider\JAV.Custom.Provider.csproj", "{C40A3A46-BE86-43EB-9B61-ADCA457438C7}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
