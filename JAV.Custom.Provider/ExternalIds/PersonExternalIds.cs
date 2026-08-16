@@ -30,7 +30,7 @@ public sealed class CustomId2() : PersonExternalId(
     "JAVCustomId2",
     Plugin.Instance.Configuration.CustomId2Url);
 
-public sealed class AvLeagueId() : PersonExternalId("AV-LEAGUE", "AV-LEAGUE", "https://www.av-league.com/actress/{0}");
+public sealed class AvLeagueId() : PersonExternalId("AV-LEAGUE", "AV-LEAGUE", "https://www.av-league.com/actress/{0}.html");
 public sealed class XsListId() : PersonExternalId("XsList", "XsList", "https://xslist.org/en/model/{0}.html");
 public sealed class MinnanoAvId() : PersonExternalId("Minnano-AV", "Minnano-AV", "https://www.minnano-av.com/actress{0}.html");
 public sealed class GfriendsId() : PersonExternalId("Gfriends", "Gfriends");

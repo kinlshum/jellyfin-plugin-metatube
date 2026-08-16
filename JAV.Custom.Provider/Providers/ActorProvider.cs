@@ -243,6 +243,9 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
         var links = new Dictionary<string, string>(record.Urls, StringComparer.OrdinalIgnoreCase);
         var formats = new Dictionary<string, (string Label, string Format)>(StringComparer.OrdinalIgnoreCase)
         {
+            ["AV-LEAGUE"] = ("AV-LEAGUE", "https://www.av-league.com/actress/{0}.html"),
+            ["XsList"] = ("XsList", "https://xslist.org/en/model/{0}.html"),
+            ["Minnano-AV"] = ("Minnano-AV", "https://www.minnano-av.com/actress{0}.html"),
             ["SupjavActor"] = ("Superjav", "https://supjav.com/category/cast/{0}"),
             ["JavdbActor"] = ("Javdb", "https://javdb.com/actors/{0}.html"),
             ["InstagramActor"] = ("Instagram", "https://instagram.com/{0}/"),
