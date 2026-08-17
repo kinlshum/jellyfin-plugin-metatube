@@ -268,6 +268,7 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             ["AV-LEAGUE"] = ("AV-LEAGUE", "https://www.av-league.com/actress/{0}.html"),
             ["XsList"] = ("XsList", "https://xslist.org/en/model/{0}.html"),
             ["Minnano-AV"] = ("Minnano-AV", "https://www.minnano-av.com/actress{0}.html"),
+            ["Gfriends"] = ("Gfriends", "https://github.com/gfriends/gfriends?gfriends-id={0}"),
             ["SupjavActor"] = ("Superjav", "https://supjav.com/category/cast/{0}"),
             ["JavdbActor"] = ("Javdb", "https://javdb.com/actors/{0}.html"),
             ["InstagramActor"] = ("Instagram", "https://instagram.com/{0}/"),

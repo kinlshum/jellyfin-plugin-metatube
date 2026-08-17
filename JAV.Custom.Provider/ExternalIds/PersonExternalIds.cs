@@ -24,7 +24,7 @@ public sealed class CustomProviderId() : PersonExternalId(Plugin.ProviderName, P
 public sealed class AvLeagueId() : PersonExternalId("AV-LEAGUE", "AV-LEAGUE", "https://www.av-league.com/actress/{0}.html");
 public sealed class XsListId() : PersonExternalId("XsList", "XsList", "https://xslist.org/en/model/{0}.html");
 public sealed class MinnanoAvId() : PersonExternalId("Minnano-AV", "Minnano-AV", "https://www.minnano-av.com/actress{0}.html");
-public sealed class GfriendsId() : PersonExternalId("Gfriends", "Gfriends");
+public sealed class GfriendsId() : PersonExternalId("Gfriends", "Gfriends", "https://github.com/gfriends/gfriends?gfriends-id={0}");
 public sealed class JavLibraryIdolId() : PersonExternalId("JavLibrary Idol", "JavLibraryIdol", "https://www.javlibrary.com/en/vl_star.php?s={0}");
 public sealed class JapanHdvIdolId() : PersonExternalId("JapanHDV Idol", "JapanHDVIdol");
 public sealed class SextbActressId() : PersonExternalId("Sextb JAV Actress ID", "SextbActress", "https://sextb.net/actress/{0}");
