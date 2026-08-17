@@ -276,7 +276,9 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             ["SextbActress"] = ("Sextb", "https://sextb.net/actress/{0}"),
             ["StashActor"] = ("Stash", "http://localhost:9999/performers/{0}"),
             ["TwitterActor"] = ("X (Twitter)", "https://twitter.com/{0}/"),
-            ["PubjavActor"] = ("Pubjav", "https://pubjav.com/tag/{0}/")
+            ["PubjavActor"] = ("Pubjav", "https://pubjav.com/tag/{0}/"),
+            ["Babepedia"] = ("Babepedia", "https://www.babepedia.com/babe/{0}"),
+            ["JAVDatabase"] = ("JAVDatabase", "https://www.javdatabase.com/idols/{0}/")
         };
         foreach (var externalId in record.ExternalIds)
         {
