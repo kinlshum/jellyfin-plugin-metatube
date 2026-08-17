@@ -32,7 +32,6 @@ public sealed class JavDbId() : PersonExternalId("Javdb", "JavdbActor", "https:/
 public sealed class SupjavId() : PersonExternalId("Superjav", "SupjavActor", "https://supjav.com/category/cast/{0}");
 public sealed class PubjavId() : PersonExternalId("Pubjav", "PubjavActor", "https://pubjav.com/tag/{0}/");
 public sealed class SexctId() : PersonExternalId("Sexct", "SexctActor");
-public sealed class XId() : PersonExternalId("X", "XActor", "https://x.com/{0}");
 public sealed class OfficialWebsiteId() : PersonExternalId("Official website", "OfficialWebsite");
 public sealed class InstagramId() : PersonExternalId("Instagram", "InstagramActor", "https://instagram.com/{0}/");
 public sealed class TwitterId() : PersonExternalId("X (Twitter)", "TwitterActor", "https://twitter.com/{0}/");
