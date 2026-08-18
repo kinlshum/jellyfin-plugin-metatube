@@ -82,6 +82,12 @@ public class PluginConfiguration : BasePluginConfiguration
     public string ActorResolverUrl { get; set; } = "http://192.168.10.170:9211";
 
 #if __EMBY__
+    [DisplayName("Reuse existing Emby actors")]
+    [Description("During movie scans, match existing Emby people by preferred name, Japanese name, aliases, or reversed English name and skip online actor and image lookups.")]
+#endif
+    public bool ReuseExistingEmbyActors { get; set; } = true;
+
+#if __EMBY__
     [DisplayName("Enable badges")]
     [Description("Add Chinese subtitle badges to primary images.")]
 #endif

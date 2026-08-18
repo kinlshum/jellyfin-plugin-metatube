@@ -7,6 +7,7 @@ using Jellyfin.Plugin.MetaTube.Helpers;
 using Jellyfin.Plugin.MetaTube.Metadata;
 using Jellyfin.Plugin.MetaTube.Translation;
 using MediaBrowser.Controller.Entities;
+using MediaBrowser.Controller.Library;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Providers;
 using MediaBrowser.Model.Providers;
@@ -35,16 +36,24 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
 
     private static readonly string[] AvBaseSupportedProviderNames = { "DUGA", "FANZA", "Getchu", "MGS" };
     private static readonly HttpClient ActorResolverClient = new() { Timeout = TimeSpan.FromSeconds(30) };
+    private static readonly SemaphoreSlim PersonIndexLock = new(1, 1);
+    private static IReadOnlyDictionary<string, string> _personIndex =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+    private static DateTime _personIndexExpiresAt = DateTime.MinValue;
+
+    private readonly ILibraryManager _libraryManager;
 
 #if __EMBY__
     public MetadataFeatures[] Features => new[]
         { MetadataFeatures.Collections, MetadataFeatures.Adult, MetadataFeatures.RequiredSetup };
 
-    public MovieProvider(ILogManager logManager) : base(logManager.CreateLogger<MovieProvider>())
+    public MovieProvider(ILogManager logManager, ILibraryManager libraryManager)
+        : base(logManager.CreateLogger<MovieProvider>())
 #else
-    public MovieProvider(ILogger<MovieProvider> logger) : base(logger)
+    public MovieProvider(ILogger<MovieProvider> logger, ILibraryManager libraryManager) : base(logger)
 #endif
     {
+        _libraryManager = libraryManager;
     }
 
     public async Task<MetadataResult<Movie>> GetMetadata(MovieInfo info,
@@ -86,7 +95,8 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
         if (Configuration.EnableActorSubstitution)
             m.Actors = Configuration.GetActorSubstitutionTable().Substitute(m.Actors).ToArray();
 
-        m.Actors = await ResolveCanonicalActorNames(m.Actors, cancellationToken).ConfigureAwait(false);
+        var actorResolution = await ResolveCanonicalActorNames(m.Actors, cancellationToken).ConfigureAwait(false);
+        m.Actors = actorResolution.Names;
 
         // Distinct and clean blank list
         m.Genres = m.Genres?.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct().ToArray() ?? Array.Empty<string>();
@@ -202,22 +212,48 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
                 Type = PersonKind.Actor,
 #endif
             };
-            await SetActorImageUrl(actor, cancellationToken);
+            if (!actorResolution.ExistingNames.Contains(name))
+                await SetActorImageUrl(actor, cancellationToken);
             result.AddPerson(actor);
         }
+
+        MetadataRefreshTracker.Mark(m.Provider, m.Id);
 
         return result;
     }
 
-    private async Task<string[]> ResolveCanonicalActorNames(IEnumerable<string> actors,
+    private async Task<(string[] Names, HashSet<string> ExistingNames)> ResolveCanonicalActorNames(
+        IEnumerable<string> actors,
         CancellationToken cancellationToken)
     {
         var names = actors?.Where(name => !string.IsNullOrWhiteSpace(name)).ToArray() ?? Array.Empty<string>();
-        if (names.Length == 0 || string.IsNullOrWhiteSpace(Configuration.ActorResolverUrl)) return names;
+        var existingNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        if (names.Length == 0) return (names, existingNames);
+
+        var personIndex = Configuration.ReuseExistingEmbyActors
+            ? await GetPersonIndex(cancellationToken).ConfigureAwait(false)
+            : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
         var resolved = new List<string>(names.Length);
         foreach (var name in names)
         {
+            var existingName = ActorIdentityKeys(name)
+                .Select(key => personIndex.TryGetValue(key, out var match) ? match : null)
+                .FirstOrDefault(match => !string.IsNullOrWhiteSpace(match));
+            if (!string.IsNullOrWhiteSpace(existingName))
+            {
+                resolved.Add(existingName);
+                existingNames.Add(NormalizePersonName(existingName));
+                Logger.Debug("Reuse existing Emby actor without online lookup: {0} -> {1}", name, existingName);
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(Configuration.ActorResolverUrl))
+            {
+                resolved.Add(name);
+                continue;
+            }
+
             try
             {
                 var url = $"{Configuration.ActorResolverUrl.TrimEnd('/')}/resolve?name={Uri.EscapeDataString(name)}";
@@ -235,7 +271,79 @@ public class MovieProvider : BaseProvider, IRemoteMetadataProvider<Movie, MovieI
             }
         }
 
-        return resolved.Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+        return (resolved.Distinct(StringComparer.OrdinalIgnoreCase).ToArray(), existingNames);
+    }
+
+    private async Task<IReadOnlyDictionary<string, string>> GetPersonIndex(CancellationToken cancellationToken)
+    {
+        if (_personIndexExpiresAt > DateTime.UtcNow) return _personIndex;
+
+        await PersonIndexLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (_personIndexExpiresAt > DateTime.UtcNow) return _personIndex;
+
+            var index = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            var people = _libraryManager.GetItemList(new InternalItemsQuery
+            {
+#if __EMBY__
+                IncludeItemTypes = new[] { nameof(Person) },
+#else
+                IncludeItemTypes = new[] { Jellyfin.Data.Enums.BaseItemKind.Person },
+#endif
+                Recursive = true
+            });
+            foreach (var person in people.Where(person => !string.IsNullOrWhiteSpace(person.Name)))
+            {
+                AddPersonIdentity(index, person.Name, person.Name);
+                if (!string.IsNullOrWhiteSpace(person.OriginalTitle))
+                    AddPersonIdentity(index, person.OriginalTitle, person.Name);
+                foreach (var providerId in person.ProviderIds)
+                {
+                    if (providerId.Key.Equals("JAVAlsoKnownAs", StringComparison.OrdinalIgnoreCase))
+                    {
+                        foreach (var alias in providerId.Value.Split(',', StringSplitOptions.RemoveEmptyEntries))
+                            AddPersonIdentity(index, alias, person.Name);
+                    }
+                }
+            }
+
+            _personIndex = index;
+            _personIndexExpiresAt = DateTime.UtcNow.AddMinutes(5);
+            Logger.Info("Indexed {0} existing Emby actor identities", index.Count);
+            return _personIndex;
+        }
+        finally
+        {
+            PersonIndexLock.Release();
+        }
+    }
+
+    private static void AddPersonIdentity(IDictionary<string, string> index, string identity, string preferredName)
+    {
+        foreach (var key in ActorIdentityKeys(identity)) index.TryAdd(key, preferredName);
+    }
+
+    private static IEnumerable<string> ActorIdentityKeys(string value)
+    {
+        value = NormalizePersonName(value);
+        if (value.Length == 0) yield break;
+
+        yield return value;
+        var canonical = Regex.Match(value, @"^(.*?)\s*\(JAP、(?:\d{4}|\?)、([^()]+)\)\s*$",
+            RegexOptions.IgnoreCase);
+        if (canonical.Success)
+        {
+            foreach (var key in ActorIdentityKeys(canonical.Groups[1].Value)) yield return key;
+            foreach (var key in ActorIdentityKeys(canonical.Groups[2].Value)) yield return key;
+            yield break;
+        }
+
+        if (!Regex.IsMatch(value, @"[\u3040-\u30ff\u3400-\u9fff]"))
+        {
+            var words = value.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (words.Length == 2) yield return $"{words[1]} {words[0]}";
+        }
     }
 
     public async Task<IEnumerable<RemoteSearchResult>> GetSearchResults(MovieInfo info,

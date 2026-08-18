@@ -73,6 +73,14 @@
                         </label>
                         <div class="fieldDescription checkboxFieldDescription">Search and replace with real actor names from AVBASE.</div>
                     </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label class="emby-checkbox-label">
+                            <input id="chkReuseExistingEmbyActors" is="emby-checkbox" name="chkReuseExistingEmbyActors" type="checkbox"/>
+                            <span>Reuse existing Emby actors</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Match existing people and skip online actor and image lookups during movie scans.</div>
+                    </div>
                 </div>
 
                 <div class="verticalSection">
@@ -348,6 +356,7 @@
                 page.querySelector('#chkEnableRatings').checked = config.EnableRatings;
                 page.querySelector('#chkEnableTrailers').checked = config.EnableTrailers;
                 page.querySelector('#chkEnableRealActorNames').checked = config.EnableRealActorNames;
+                page.querySelector('#chkReuseExistingEmbyActors').checked = config.ReuseExistingEmbyActors;
                 page.querySelector('#chkEnableBadges').checked = config.EnableBadges;
                 $('#txtBadgeUrl', page).val(config.BadgeUrl).change();
                 $('#txtPrimaryImageRatio', page).val(config.PrimaryImageRatio).change();
@@ -389,6 +398,7 @@
                 config.EnableRatings = $('#chkEnableRatings', form).prop('checked');
                 config.EnableTrailers = $('#chkEnableTrailers', form).prop('checked');
                 config.EnableRealActorNames = $('#chkEnableRealActorNames', form).prop('checked');
+                config.ReuseExistingEmbyActors = $('#chkReuseExistingEmbyActors', form).prop('checked');
                 config.EnableBadges = $('#chkEnableBadges', form).prop('checked');
                 config.BadgeUrl = $('#txtBadgeUrl', form).val();
                 config.PrimaryImageRatio = $('#txtPrimaryImageRatio', form).val();

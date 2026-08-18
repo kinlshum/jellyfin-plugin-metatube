@@ -1,4 +1,5 @@
 using Jellyfin.Plugin.MetaTube.Extensions;
+using Jellyfin.Plugin.MetaTube.Helpers;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
 using MediaBrowser.Controller.Providers;
@@ -83,7 +84,8 @@ public class MovieImageProvider : BaseProvider, IRemoteImageProvider, IHasOrder
         }
 
 #if __EMBY__
-        if (libraryOptions.SaveLocalMetadata)
+        if (Configuration.SaveAllBackdropsLocally && libraryOptions.SaveLocalMetadata
+                                                  && MetadataRefreshTracker.Consume(m.Provider, m.Id))
             await SaveAllBackdropsLocally(item, m, cancellationToken).ConfigureAwait(false);
 #endif
 
@@ -95,13 +97,9 @@ public class MovieImageProvider : BaseProvider, IRemoteImageProvider, IHasOrder
         CancellationToken cancellationToken)
     {
         var mediaDirectory = Path.GetDirectoryName(item.Path);
-        if (string.IsNullOrWhiteSpace(mediaDirectory) || !Directory.Exists(mediaDirectory))
-            return;
+        if (string.IsNullOrWhiteSpace(mediaDirectory) || !Directory.Exists(mediaDirectory)) return;
 
-        var urls = new List<string>
-        {
-            ApiClient.GetBackdropImageApiUrl(movie.Provider, movie.Id)
-        };
+        var urls = new List<string> { ApiClient.GetBackdropImageApiUrl(movie.Provider, movie.Id) };
         urls.AddRange((movie.PreviewImages ?? Array.Empty<string>())
             .Select(url => ApiClient.GetBackdropImageApiUrl(movie.Provider, movie.Id, url)));
 
@@ -124,13 +122,12 @@ public class MovieImageProvider : BaseProvider, IRemoteImageProvider, IHasOrder
             foreach (var path in Directory.EnumerateFiles(mediaDirectory, "fanart*.jpg"))
             {
                 var stem = Path.GetFileNameWithoutExtension(path);
-                if (stem == "fanart")
-                    continue;
+                if (stem == "fanart") continue;
                 if (int.TryParse(stem["fanart".Length..], out var index) && index >= urls.Count)
                     File.Delete(path);
             }
 
-            Logger.Info("Saved {0} backdrops beside {1}", urls.Count, item.Path);
+            Logger.Info("Saved {0} backdrops after metadata refresh for {1}", urls.Count, item.Path);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
