@@ -14,8 +14,11 @@ public class RemoteActorSearch
 
 public sealed class RemoteActor : RemoteActorSearch
 {
-    [JsonPropertyName("birthday")] public DateTime Birthday { get; set; }
-    [JsonPropertyName("debut_date")] public DateTime DebutDate { get; set; }
+    [JsonPropertyName("birthday")] public string Birthday { get; set; } = string.Empty;
+    [JsonPropertyName("debut_date")] public string DebutDate { get; set; } = string.Empty;
+    [JsonPropertyName("debut_title")] public string DebutTitle { get; set; } = string.Empty;
+    [JsonPropertyName("av_appearance_period")] public string AvAppearancePeriod { get; set; } = string.Empty;
+    [JsonPropertyName("tags")] public string[] Tags { get; set; } = Array.Empty<string>();
     [JsonPropertyName("blood_type")] public string BloodType { get; set; } = string.Empty;
     [JsonPropertyName("cup_size")] public string CupSize { get; set; } = string.Empty;
     [JsonPropertyName("measurements")] public string Measurements { get; set; } = string.Empty;

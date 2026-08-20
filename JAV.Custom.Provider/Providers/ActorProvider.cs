@@ -40,6 +40,7 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
         var person = new Person
         {
             Name = merged.Name,
+            SortName = merged.Name,
             Overview = FormatOverview(merged),
             ProductionLocations = BuildLocations(merged)
         };
@@ -61,6 +62,7 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             person.SetProviderId(key, externalId.Value);
         }
         SetCustomFields(person, merged);
+        ActorRenameCoordinator.Register(record.Id, merged.Name);
 
         return new MetadataResult<Person> { Item = person, HasMetadata = true };
     }
@@ -76,17 +78,19 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
 
         if (!matches.Any() && !string.IsNullOrWhiteSpace(info.Name))
         {
-            var lookupId = "lookup:" + info.Name.Trim();
-            var lookupRecord = CreateLookupRecord(info, lookupId)!;
+            var lookupRecord = CreateLookupRecord(info, "lookup:" + info.Name.Trim())!;
             var online = await OnlineActorLookup.Lookup(lookupRecord, _logger, cancellationToken).ConfigureAwait(false);
             var resolved = online.FirstOrDefault();
+            var lookupId = resolved is not null && !string.IsNullOrWhiteSpace(resolved.Id)
+                ? "actor:" + resolved.Id
+                : lookupRecord.Id;
             var dynamicResult = new RemoteSearchResult
             {
                 Name = resolved?.Name ?? info.Name.Trim(),
                 SearchProviderName = Name,
                 ImageUrl = resolved?.Images.FirstOrDefault() ?? string.Empty,
-                PremiereDate = resolved is not null && resolved.Birthday.Year > 1 ? resolved.Birthday : null,
-                ProductionYear = resolved is not null && resolved.Birthday.Year > 1 ? resolved.Birthday.Year : null
+                PremiereDate = resolved is not null && DateTime.TryParse(resolved.Birthday, out var birthday) ? birthday : null,
+                ProductionYear = resolved is not null && DateTime.TryParse(resolved.Birthday, out birthday) ? birthday.Year : null
             };
             dynamicResult.SetProviderId(Plugin.ProviderId, lookupId);
             return new[] { dynamicResult };
@@ -225,8 +229,14 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
                 record.Name = actor.Name;
             record.Aliases = record.Aliases.Concat(actor.Aliases).Append(actor.Name).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             record.ImageUrls = record.ImageUrls.Concat(actor.Images).Where(value => !string.IsNullOrWhiteSpace(value)).Distinct().ToList();
-            if (string.IsNullOrWhiteSpace(record.Birthday) && actor.Birthday.Year > 1) record.Birthday = actor.Birthday.ToString("yyyy-MM-dd");
-            if (string.IsNullOrWhiteSpace(record.DebutDate) && actor.DebutDate.Year > 1) record.DebutDate = actor.DebutDate.ToString("yyyy-MM-dd");
+            if (string.IsNullOrWhiteSpace(record.Birthday) && DateTime.TryParse(actor.Birthday, out var birthday))
+                record.Birthday = birthday.ToString("yyyy-MM-dd");
+            if (string.IsNullOrWhiteSpace(record.DebutDate) && DateTime.TryParse(actor.DebutDate, out var debutDate))
+                record.DebutDate = debutDate.ToString("yyyy-MM-dd");
+            record.DebutTitle = First(record.DebutTitle, actor.DebutTitle);
+            record.AvAppearancePeriod = First(record.AvAppearancePeriod, actor.AvAppearancePeriod);
+            record.Tags = record.Tags.Concat(actor.Tags).Where(value => !string.IsNullOrWhiteSpace(value))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
             record.BloodType = First(record.BloodType, actor.BloodType);
             record.CupSize = First(record.CupSize, actor.CupSize);
             record.Measurements = First(record.Measurements, actor.Measurements);
@@ -244,6 +254,26 @@ public sealed class ActorProvider : ProviderBase, IRemoteMetadataProvider<Person
             if (!record.ExternalIds.ContainsKey("MetaTube"))
                 record.ExternalIds["MetaTube"] = mergedResolver ? actor.Id : $"{actor.Provider}:{actor.Id}";
         }
+        record.Aliases = CleanAliases(record.Aliases, record.Name);
+    }
+
+    private static List<string> CleanAliases(IEnumerable<string> aliases, string canonicalName)
+    {
+        var primaryLatin = canonicalName.Split(" (", 2, StringSplitOptions.None)[0].Trim();
+        var cleaned = new List<string>();
+        foreach (var rawAlias in aliases)
+        {
+            var alias = System.Text.RegularExpressions.Regex.Replace(
+                rawAlias ?? string.Empty,
+                "^Also known as:\\s*",
+                string.Empty,
+                System.Text.RegularExpressions.RegexOptions.IgnoreCase).Trim();
+            if (alias.Length == 0) continue;
+            if (!alias.Any(character => character is >= '\u3040' and <= '\u30ff' or >= '\u3400' and <= '\u9fff'))
+                alias = primaryLatin;
+            if (alias.Length > 0 && !cleaned.Contains(alias, StringComparer.OrdinalIgnoreCase)) cleaned.Add(alias);
+        }
+        return cleaned;
     }
 
     private static string First(string current, string candidate) => string.IsNullOrWhiteSpace(current) ? candidate : current;
